@@ -80,7 +80,7 @@ No unnecessary abstractions. Everything lives where you expect it to.
 ├── dist/               # Packaged executable
 └── BillSystem.spec     # PyInstaller spec file
 
-```text
+````**:
 
 ⚙️ Installation Guide
 1️⃣ Clone the repository
