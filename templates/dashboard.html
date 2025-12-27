@@ -7,6 +7,7 @@
             <table class="table table-hover table-striped mb-0">
                 <thead class="table-dark sticky-top">
                     <tr>
+                        <th>User ID</th> 
                         <th>Address</th>
                         <th>Name</th>
                         <th>Current Bill</th>
@@ -17,6 +18,14 @@
                 <tbody>
                     {% for row in all_residents %}
                     <tr class="align-middle">
+                        <td>
+                            {% if row['uid'] %}
+                                <span class="badge bg-primary fs-6">{{ row['uid'] }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">Missing</span>
+                            {% endif %}
+                        </td>
+
                         <td class="fw-bold">{{ row['address'] }}</td>
                         <td>{{ row['name'] }}</td>
                         <td>
@@ -29,14 +38,12 @@
                         <td>{{ row['due_date'] | indian_date }}</td>
                         <td>
                             <a href="{{ url_for('dashboard', select_address=row['address']) }}" 
-                               class="btn btn-sm btn-outline-primary">
-                               Select
-                            </a>
+                            class="btn btn-sm btn-outline-dark">Edit</a>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center py-4 text-muted">No residents found.</td>
+                        <td colspan="6" class="text-center py-4 text-muted">No residents found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -90,29 +97,48 @@
                 </div>
                 
                 <form action="{{ url_for('save_bill') }}" method="POST">
-                    <input type="hidden" name="address" value="{{ search_term }}">
+                    <input type="hidden" name="original_address" value="{{ search_term }}">
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">User ID (Unique Login)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">#</span>
+                            <input type="text" name="uid" class="form-control fw-bold text-primary" 
+                                value="{{ resident['uid'] if resident else '' }}" 
+                                placeholder="Auto-generated if empty">
+                        </div>
+                        <small class="text-muted" style="font-size: 0.75rem;">
+                            Leave blank to auto-generate. Must be unique.
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Address (Unit + Block)</label>
+                        <input type="text" name="address" class="form-control" 
+                            value="{{ search_term }}" required>
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label small text-muted">Resident Name</label>
                         <input type="text" name="name" class="form-control" 
-                               value="{{ resident['name'] if resident else '' }}" required>
+                            value="{{ resident['name'] if resident else '' }}" required>
                     </div>
 
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label class="form-label small text-muted">Bill Amount (₹)</label>
                             <input type="number" step="0.01" name="amount" class="form-control" 
-                                   value="{{ bill['amount'] if bill else '' }}" required>
+                                value="{{ bill['amount'] if bill else '' }}" required>
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label small text-muted">Due Date</label>
                             <input type="date" name="due_date" class="form-control" 
-                                   value="{{ bill['due_date'] if bill else '' }}" required>
+                                value="{{ bill['due_date'] if bill else '' }}" required>
                         </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100">
-                        Save / Update Bill
+                        Save / Update Record
                     </button>
                 </form>
             </div>

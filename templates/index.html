@@ -1,29 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="row justify-content-center mt-5">
-    <div class="col-md-6 text-center">
-        <h2 class="mb-4">Check Your Bill</h2>
+    <div class="col-md-5 text-center">
+        <h2 class="mb-4 fw-bold text-primary">Pay Your Bill</h2>
+        <p class="text-muted">Enter your unique 6-digit User ID.</p>
         
-        <div class="card p-4 mb-4">
+        <div class="card p-4 mb-4 shadow-lg border-0">
             <form method="POST">
                 <div class="mb-3">
-                    <input type="text" name="address" class="form-control form-control-lg text-center" 
-                           placeholder="Enter Your Address" required>
+                    <input type="text" name="uid" class="form-control form-control-lg text-center" 
+                           placeholder="Enter User ID (e.g. 648392)" required>
                 </div>
                 <button type="submit" class="btn btn-primary w-100 btn-lg">Search Bill</button>
             </form>
         </div>
 
         {% if bill %}
-        <div class="card p-4 bg-light text-start border-success">
-            <h4 class="text-success">Bill Found</h4>
-            <p class="fs-5"><strong>Name:</strong> {{ bill['name'] }}</p>
+        <div class="card p-4 bg-light text-start border-primary shadow-sm">
+            <div class="d-flex justify-content-between">
+                <h4 class="text-primary mb-3">Bill Details</h4>
+                <span class="badge bg-dark align-self-start">{{ bill['address'] }}</span>
+            </div>
             
+                        <p class="fs-5"><strong>Name:</strong> {{ bill['name'] }}</p>
+            <p class="fs-5"><strong>Address:</strong> {{ bill['address'] }}</p>
             <p class="fs-5"><strong>Amount Due:</strong> ₹{{ bill['amount'] }}</p>
-            
             <p class="fs-5"><strong>Due Date:</strong> {{ bill['due_date'] | indian_date }}</p>
         </div>
         {% endif %}
     </div>
 </div>
 {% endblock %}
+

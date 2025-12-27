@@ -4,6 +4,8 @@ import sqlite3
 from werkzeug.security import check_password_hash
 import csv
 import io
+import string
+import random
 from flask import make_response
 import os
 from database import init_db
@@ -46,22 +48,36 @@ def get_db_connection():
 def index():
     bill = None
     if request.method == 'POST':
-        # REQ 2: Auto-Capitalize
-        raw_addr = request.form['address']
-        address = raw_addr.strip().upper()
+        # User enters ONLY the UID
+        uid_input = request.form.get('uid', '').strip()
         
         conn = get_db_connection()
-        # Join tables to get Name + Bill details
-        bill = conn.execute('''
-            SELECT r.name, b.amount, b.due_date 
-            FROM bills b
-            JOIN residents r ON b.address = r.address
-            WHERE b.address = ?
-        ''', (address,)).fetchone()
-        conn.close()
         
-        if not bill:
-            flash('No active bill found for this address.', 'danger')
+        # 1. Find Resident by UID
+        resident = conn.execute('SELECT address, name FROM residents WHERE uid = ?', 
+                              (uid_input,)).fetchone()
+        
+        if resident:
+            address = resident['address']
+            # 2. Fetch Bill using the retrieved Address
+            bill_data = conn.execute('''
+                SELECT amount, due_date FROM bills WHERE address = ?
+            ''', (address,)).fetchone()
+            
+            # Combine data for the template
+            if bill_data:
+                bill = {
+                    'name': resident['name'],
+                    'address': resident['address'],
+                    'amount': bill_data['amount'],
+                    'due_date': bill_data['due_date']
+                }
+            else:
+                flash(f'Welcome {resident["name"]}, you have no pending bills.', 'success')
+        else:
+            flash('Invalid User ID. Please check and try again.', 'danger')
+            
+        conn.close()
             
     return render_template('index.html', bill=bill)
 
@@ -115,7 +131,7 @@ def dashboard():
     # 1. FETCH TABLE DATA: Get all residents + their current bill (if any)
     # LEFT JOIN ensures we see residents even if they don't have a bill yet.
     all_residents = conn.execute('''
-        SELECT r.address, r.name, b.amount, b.due_date 
+        SELECT r.address, r.name, r.uid, b.amount, b.due_date 
         FROM residents r
         LEFT JOIN bills b ON r.address = b.address
         ORDER BY r.address ASC
@@ -152,34 +168,55 @@ def dashboard():
 @app.route('/save_bill', methods=['POST'])
 @login_required
 def save_bill():
-    # REQ 2: Auto-Capitalize
-    address = request.form['address'].strip().upper()
+    # Get form data
+    new_address = request.form['address'].strip().upper()
+    uid_input = request.form.get('uid', '').strip()
     name = request.form['name']
     amount = request.form['amount']
     due_date = request.form['due_date']
     
+    # We use this to handle address changes (if you implemented hidden field)
+    # For now, we assume address is the anchor.
+    
     conn = get_db_connection()
     try:
-        # 1. Upsert Resident (Create if new, update name if exists)
-        conn.execute('INSERT OR REPLACE INTO residents (address, name) VALUES (?, ?)', 
-                     (address, name))
+        # 1. HANDLE UID LOGIC
+        final_uid = uid_input
         
-        # 2. REQ 3: Delete OLD bill for this address
-        conn.execute('DELETE FROM bills WHERE address = ?', (address,))
+        # If Admin left UID blank, check if user exists -> keep old, else -> generate new
+        if not final_uid:
+            existing = conn.execute('SELECT uid FROM residents WHERE address=?', (new_address,)).fetchone()
+            if existing and existing['uid']:
+                final_uid = existing['uid']
+            else:
+                final_uid = generate_uid()
+                # Ensure it is unique
+                while conn.execute('SELECT 1 FROM residents WHERE uid=?', (final_uid,)).fetchone():
+                    final_uid = generate_uid()
+
+        # 2. SAVE RESIDENT (Upsert)
+        # Note: If admin enters a duplicate UID from another user, this will fail.
+        try:
+            conn.execute('INSERT OR REPLACE INTO residents (address, name, uid) VALUES (?, ?, ?)', 
+                         (new_address, name, final_uid))
+        except sqlite3.IntegrityError:
+             flash(f'Error: UID "{final_uid}" is already taken by another user.', 'danger')
+             return redirect(url_for('dashboard'))
         
-        # 3. Insert NEW bill
+        # 3. SAVE BILL
+        conn.execute('DELETE FROM bills WHERE address = ?', (new_address,))
         conn.execute('INSERT INTO bills (address, amount, due_date) VALUES (?, ?, ?)',
-                     (address, amount, due_date))
+                     (new_address, amount, due_date))
         
         conn.commit()
-        flash('Bill saved successfully!', 'success')
+        flash(f'Saved successfully! User ID: {final_uid}', 'success')
+        
     except Exception as e:
-        flash(f'Error: {e}', 'danger')
+        flash(f'System Error: {e}', 'danger')
     finally:
         conn.close()
         
     return redirect(url_for('dashboard'))
-
 
     # --- BULK IMPORT/EXPORT ROUTES ---
 
@@ -218,49 +255,53 @@ def export_csv():
     output.headers["Content-type"] = "text/csv"
     return output
 
+def generate_uid():
+    """Generates a random 6-digit numeric ID"""
+    return ''.join(random.choices(string.digits, k=6))
+
 @app.route('/import_csv', methods=['POST'])
 @login_required
 def import_csv():
-    if 'file' not in request.files:
-        flash('No file uploaded.', 'danger')
-        return redirect(url_for('dashboard'))
-    
+    if 'file' not in request.files: return redirect(url_for('dashboard'))
     file = request.files['file']
-    if file.filename == '':
-        flash('No file selected.', 'danger')
-        return redirect(url_for('dashboard'))
-
+    
     try:
-        # Read file stream safely
         stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
         csv_input = csv.reader(stream)
-        
-        # Skip Header Row (optional, depends if your CSV has headers)
-        next(csv_input, None) 
+        next(csv_input, None) # Skip Header
 
         conn = get_db_connection()
         count = 0
         
         for row in csv_input:
-            # Expected Format: [Address, Name, Amount, DueDate]
             if len(row) < 4: continue
             
-            # Clean Data
             address = row[0].strip().upper()
             name = row[1].strip()
             amount = row[2].strip()
             due_date = row[3].strip()
-
-            if not address or not name: continue # Skip invalid rows
-
-            # 1. Update/Insert Resident
-            conn.execute('INSERT OR REPLACE INTO residents (address, name) VALUES (?, ?)', 
-                         (address, name))
             
-            # 2. Update Bill (Delete old -> Insert new)
+            # Logic: Use UID from CSV if present (Column 5), else Generate
+            # ... inside the loop in import_csv ...
+
+            # Logic: Check for Column 5 (Index 4)
+            if len(row) >= 5 and row[4].strip():
+                uid = row[4].strip()
+            else:
+                # Fallback: Generate if CSV column is missing or empty
+                existing = conn.execute('SELECT uid FROM residents WHERE address=?', (address,)).fetchone()
+                if existing:
+                    uid = existing['uid']
+                else:
+                    uid = generate_uid()
+                    # Basic collision check
+                    while conn.execute('SELECT 1 FROM residents WHERE uid=?', (uid,)).fetchone():
+                        uid = generate_uid()
+
+            conn.execute('INSERT OR REPLACE INTO residents (address, name, uid) VALUES (?, ?, ?)', 
+                         (address, name, uid))
+            
             conn.execute('DELETE FROM bills WHERE address = ?', (address,))
-            
-            # Only add bill if amount is greater than 0
             if amount and float(amount) > 0:
                 conn.execute('INSERT INTO bills (address, amount, due_date) VALUES (?, ?, ?)',
                              (address, amount, due_date))
@@ -270,9 +311,8 @@ def import_csv():
         conn.commit()
         conn.close()
         flash(f'Success! Processed {count} records.', 'success')
-
     except Exception as e:
-        flash(f'Error processing CSV: {e}', 'danger')
+        flash(f'Error: {e}', 'danger')
 
     return redirect(url_for('dashboard'))
 
