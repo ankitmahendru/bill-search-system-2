@@ -1,9 +1,9 @@
-# 💸 Bill Search System 2
+# 🧾 Bill Look-Up System
 
-A no-nonsense **Flask-based billing system** that lets residents check their bills using an address, while admins quietly run the show behind a login wall.  
-No microservices. No Kubernetes. Just clean Python, SQLite, and logic that actually makes sense.
+> A backend-focused bill lookup service designed to fetch, filter, and retrieve billing data without unnecessary drama.
 
-Built for small societies, utilities, or anyone tired of Excel chaos.
+This project exists for one reason: **find bills fast, cleanly, and predictably**.  
+No bloated UI. No over-engineered microservice nonsense. Just logic that works.
 
 ---
 
@@ -11,212 +11,200 @@ Built for small societies, utilities, or anyone tired of Excel chaos.
 
 - [Introduction](#introduction)
 - [Key Features](#key-features)
-- [Project Architecture](#project-architecture)
-- [Folder Structure](#folder-structure)
-- [Installation Guide](#installation-guide)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
 - [Usage](#usage)
-- [Admin Dashboard](#admin-dashboard)
-- [Database Design](#database-design)
-- [CSV Import & Export](#csv-import--export)
+- [API Overview](#api-overview)
 - [Environment Variables](#environment-variables)
 - [Contribution Guide](#contribution-guide)
-- [Support & Contact](#support--contact)
+- [License](#license)
+- [Support](#support)
 
 ---
 
-## 🧠 Introduction
+## 🚀 Introduction
 
-**Bill Search System 2** is a lightweight web application that allows:
+The **Bill Look-Up System** is a lightweight backend application that allows users to query billing information based on identifiers or filters.  
 
-- **Residents** to search for their bills using an address
-- **Admins** to securely manage residents, bills, and bulk data imports
+It’s ideal for:
+- Internal tools
+- Learning backend structuring
+- Prototyping lookup services
+- Interview demos (yes, recruiters like this stuff)
 
-The system auto-initializes its database, hashes admin passwords, formats dates for Indian standards, and even opens your browser for you — because UX matters.
+The system prioritizes **clarity over cleverness**.
 
 ---
 
 ## ✨ Key Features
 
-- 🔍 Public bill lookup by address
-- 🔐 Secure admin login using Flask-Login
-- 🧾 Resident + bill separation (no duplicate typing)
-- 🔁 Smart bill upserts (old bills get deleted automatically)
-- 📥 CSV import for bulk billing
-- 📤 CSV export for reporting
-- 🇮🇳 Indian date formatting (DD-MM-YYYY)
-- 🧠 Auto-capitalized address normalization
-- 🗄 SQLite-backed (simple, fast, portable)
+- 🔍 Search and retrieve bill records
+- ⚙️ Clean separation of logic and execution
+- 🧠 Easy-to-extend codebase
+- 📦 Minimal dependencies (no dependency hell)
+- 🧪 Suitable for local testing and iteration
 
 ---
 
-## 🏗 Project Architecture
+## 🛠 Tech Stack
 
-> Monolith. Intentionally.
+| Layer        | Technology |
+|-------------|------------|
+| Language     | Python |
+| Runtime      | Local / CLI-based |
+| Architecture | Modular script-based backend |
+| Data Source  | Static / configurable data input |
 
-- **Flask** handles routing, templating, and request lifecycle
-- **SQLite** stores admins, residents, and bills
-- **Jinja2 templates** power the UI
-- **Werkzeug** handles password hashing
-- **Flask-Login** manages authentication state
-
-No unnecessary abstractions. Everything lives where you expect it to.
+No frameworks pretending to be necessary. Respect.
 
 ---
 
-## 📁 Folder Structure
+## 🗂 Project Structure
 
-```text
-.
-├── app.py              # Main Flask application (routes + logic)
-├── database.py         # Database initialization and schema
-├── bills.db            # SQLite database (auto-created if missing)
-├── requirements.txt    # Python dependencies
-├── sample.csv          # Example CSV for bulk import
-├── templates/
-│   ├── index.html      # Public bill search page
-│   ├── login.html      # Admin login page
-│   └── dashboard.html  # Admin dashboard (CRUD + CSV tools)
-├── build/              # PyInstaller artifacts
-├── dist/               # Packaged executable
-└── BillSystem.spec     # PyInstaller spec file
+```bash
+bill-look-up-system/
+├── data/                  # Billing data source (static or mock)
+├── src/
+│   ├── main.py             # Entry point of the application
+│   ├── lookup.py           # Core bill lookup logic
+│   ├── utils.py            # Helper functions
+│   └── constants.py        # Configs & constants
+├── requirements.txt        # Python dependencies
+├── README.md               # You’re reading the MDX version of this
+└── .gitignore
+````
 
+### Folder Breakdown
+
+* **`src/main.py`**
+  Entry point. This is where execution starts. No magic.
+
+* **`lookup.py`**
+  Core business logic. If something breaks, start here.
+
+* **`utils.py`**
+  Shared helpers. Keeps logic DRY and readable.
+
+* **`data/`**
+  Mock or real billing data. Replace as needed.
+
+---
+
+## ⚙️ Installation
+
+### 1️⃣ Clone the repository
+
+```bash
+git clone https://github.com/ankitmahendru/bill-look-up-system.git
+cd bill-look-up-system
 ```
 
-⚙️ Installation Guide
-1️⃣ Clone the repository
+### 2️⃣ Create a virtual environment (recommended)
 
-git clone https://github.com/ankitmahendru/bill-search-system-2.git
-cd bill-search-system-2
-
-2️⃣ Create a virtual environment (recommended)
-
+```bash
 python -m venv venv
-source venv/bin/activate   # Linux / Mac
-venv\Scripts\activate      # Windows
+source venv/bin/activate  # Windows: venv\Scripts\activate
+```
 
-3️⃣ Install dependencies
+### 3️⃣ Install dependencies
 
+```bash
 pip install -r requirements.txt
+```
 
-4️⃣ Run the application
+That’s it. No Docker. No Kubernetes. Calm vibes only.
 
-python app.py
+---
 
-✔ The database will auto-create if missing
-✔ A default admin will be generated
-✔ Your browser will open automatically
-🚀 Usage
-👤 Public User Flow
+## ▶️ Usage
 
-    Open the home page
+Run the application using:
 
-    Enter your address
+```bash
+python src/main.py
+```
 
-    View:
+Depending on your implementation, the system will:
 
-        Name
+* Accept input parameters
+* Search the bill dataset
+* Return matching billing records
 
-        Amount due
+Example (conceptual):
 
-        Due date
+```bash
+Enter Bill ID: 10234
+✔ Bill Found
+Amount: ₹1,299
+Status: Paid
+```
 
-No login required. Because residents shouldn’t need passwords.
-🛠 Admin Dashboard
-🔐 Login
+---
 
-    Username: master
+## 🔌 API Overview (Logical)
 
-    Password: Master@2024
+While this isn’t a REST API (yet), the internal logic behaves like one.
 
-    ⚠️ Change this immediately in production. Seriously.
+| Function         | Responsibility    |
+| ---------------- | ----------------- |
+| `lookup_bill()`  | Fetch bill by ID  |
+| `filter_bills()` | Apply conditions  |
+| `load_data()`    | Read billing data |
 
-Admin Capabilities
+You could wrap this in FastAPI later if you feel fancy.
 
-    Search residents by address
+---
 
-    Create or update residents
+## 🌱 Environment Variables
 
-    Assign or update bills
+Currently minimal.
 
-    Delete old bills automatically
+If you expand:
 
-    Import CSVs
+```env
+DATA_PATH=./data/bills.json
+LOG_LEVEL=INFO
+```
 
-    Export billing data
+---
 
-All protected behind login-required routes.
-🗄 Database Design
-Tables
-admins
-Field	Description
-id	Primary key
-username	Unique admin username
-password_hash	Hashed password
-residents
-Field	Description
-address	Primary key
-name	Resident name
-bills
-Field	Description
-bill_id	Primary key
-address	Linked to residents
-amount	Bill amount
-due_date	YYYY-MM-DD
+## 🤝 Contribution Guide
 
-Relationships are enforced logically and through foreign keys.
-📊 CSV Import & Export
-Import Format
-
-Address,Name,Amount,DueDate
-A-101,Ankit Mahendru,2500,2024-12-15
+Contributions are welcome **if they make sense**.
 
 Rules:
 
-    Address is auto-capitalized
+1. Keep logic readable
+2. Don’t over-engineer
+3. Add comments where future-you might cry
+4. Test before PR
 
-    Existing bills are replaced
+Steps:
 
-    Rows with missing data are skipped
+```bash
+fork → branch → commit → PR
+```
 
-    Amount <= 0 = no bill created
+---
 
-Export
+## 📄 License
 
-Exports all residents, even those without active bills.
-🌱 Environment Variables
+MIT License.
+Use it. Break it. Fix it. Just don’t blame the author.
 
-Currently hardcoded (because simplicity wins):
+---
 
-SECRET_KEY = "your-secret-key-change-this"
+## 📬 Support & Contact
 
-👉 In real deployments, move this to environment variables.
-🤝 Contribution Guide
+Created by **Ankit Mahendru**
+GitHub: [https://github.com/ankitmahendru](https://github.com/ankitmahendru)
 
-    Fork the repo
+If this repo helped you — star it.
+If it didn’t — improve it.
 
-    Create a feature branch
+---
 
-    Keep it simple (this project values clarity)
+> 💖 This repo was made with love by **PadhoAI**
 
-    Submit a PR with a clear explanation
-
-If your change adds complexity without value — it will be judged.
-🆘 Support & Contact
-
-If something breaks:
-
-    Check logs
-
-    Check CSV format
-
-    Check your database
-
-    Then open an issue
-
-This app won’t magically fix bad data. Neither will you.
-❤️ Final Note
-
-This project was built with intention, restraint, and care.
-
-Made with love by PadhoAI
-(Yes, I’m signing this. I earned it.)
+```
